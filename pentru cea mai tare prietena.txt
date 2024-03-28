@@ -1,0 +1,81 @@
+#include "BluetoothSerial.h"
+#include <driver/dac.h>
+BluetoothSerial ESP_BT;
+
+const int ADC_pin = 15;  
+float analog_voltage=0,freq, ampl,numar, smn;
+int incoming;
+int k = 0, j = 0;
+void setup() {
+   Serial.begin(9600);
+  ESP_BT.begin("★Miruna e cea mai tare★");
+  dac_output_enable(DAC_CHANNEL_1);
+  k = 0;
+
+
+
+}
+
+void loop() {
+ 
+if(k == 0){//pana ma conectez la telefon k se face 1 si primul BT.print nu se afiseaza pe telefon, eventual introducem 0 ca sa resetam si atunci se va afisa bn si frum
+  delay(1);
+ESP_BT.print("Umax: ");
+k = 1;
+}
+if(k == 2){
+ESP_BT.print("Frecventa: "); // ca sa apara doar odata mesajele astea pt ca noi introducem o sg data datele, folosim acesti k1,k2,k3.
+k = 3;
+}
+ if (ESP_BT.available()){
+ incoming = ESP_BT.read();
+ numar = 0; // resetam numarul 
+ while(incoming != 10){ // cand introducem un numar pe seriala BT, in incoming vin si caracterele ENTER(13) si FEED_LINE(10), pe care trb sa le ignoram, asa ca, numarul nostru se termina cand
+ //s-a receptionat caracterul new_line
+   if(incoming != 13) // daca se receptioneaza caracterul ENTER(13), se sare peste el
+numar = numar * 10 + incoming - 48; // incoming receptioneaza cifra cu cifra, ca sa formam numarul trenuie sa inmultim cu 10 cifra precedenta. In plus, incoming e in ASCII, trb scazut 48
+incoming = ESP_BT.read();
+ }// in while se formeaza numarul, daca avem 987, incoming va fi 9 apoi 9 * 10 + 8 adica 98 apoi 98 * 10 +7 adica 987, toate astea in while
+
+ if(numar == 0){ // if-ul asta e ca sa resetam variabilele si sa introducem date noi, deci, apasa 0 pe telefon si vezi ce se intampla
+   ampl = 0;
+   freq = 0; // efectiv resetam totul
+   k = 0;
+ }
+ else if(ampl == 0){ // daca n-am introdus nimic in amplitudine, primul numar scris pe telefon, il bagam in variabila ampl, adica e amplitudinea
+   smn = numar; // facem o copie la ce introudem de la tel ca ne ajuta mai tarziu
+ampl = (numar   / 3.3) * 255; // tranformam din volti ca in asta se masoara amplitudinea([Umax]=[A]=V) IN biti sau in ce naiba trebuie ca sa fie vazut de program
+// gen 255 e valoarea maxima si 0 e minima, 255 = 3.3 V si 0 = 0V, asa ca noi daca bagam numar = 3V tre sa vedem cat la suta din 3.3V reprezinta acei 3V iar procentul ala
+//tre sa-l aplicam la 255, 3 din 3.3V e 90%, iar 90% din 255 e 231, adica amplitudinea noastra e o scara cu 231 de trepte!!!!!
+k = 2;                                                                                                            // ↑
+ }                                                                                                                // |
+else                                                                                                              // |
+freq = 1000 / numar / ampl / 2;//la fel si cu frecventa, noi o introducem in Hz si ea este de fapt timpul dintre doua trepte, in milisecunde(de aia am inmultit cu 1000 ca nu-s secunde)
+ }
+
+if(freq != 0 ){
+  analog_voltage = 0;
+  for (int i = 0; i < ampl; i++){ // semnalul urca de la 0 la ampl(231 sa zicem)
+  dac_output_voltage(DAC_CHANNEL_1, i);
+  delay(freq); // iar timpul dintre doua trepte e de freq milisecunde, in total, aceste freq milisecunde inmultite cu ampl fac jumatate de perioada
+  analog_voltage = analog_voltage + analogRead(ADC_pin);
+ j ++;
+  }
+  for (int i = ampl; i > 0; i--){ // semnalul coboara de la Umax pana la 0 si asa se termina o perioada
+  dac_output_voltage(DAC_CHANNEL_1, i);
+  delay(freq);
+   analog_voltage = analog_voltage + analogRead(ADC_pin);
+  j ++;
+  }
+  
+ if ( j > 2000){ // odata la aprox 2 secunde se afiseaza valoarea efectiva calculata cu formula A /  radical din 3
+
+    ESP_BT.print("Valoarea efectiva a semnalului generat de DAC este: ");
+  ESP_BT.print(smn / 2 * sqrt(3)); // impartit la 2 ca e si divizorul si reduce la jumatate amplitudinea
+   ESP_BT.println("V");
+
+  j = 0;
+  }
+}
+ 
+}
