@@ -9,3 +9,6 @@ Some user instructions:
 You must install any Andoird/IOS terminal app like this(for Android) https://play.google.com/store/apps/details?id=de.kai_morich.serial_bluetooth_terminal&hl=en&gl=US&pli=1
 
 Basically, after uploading the code on esp32, type an amplitude value between 0 - 3.3V(VCC), and a frequency(i don't remember max value but it isn't so high).
+
+Results(PIA PDFs):
+https://drive.google.com/drive/folders/1hNPPbqDGbG7KNYCh867GncyH16Yzp0Ur?direction=a
